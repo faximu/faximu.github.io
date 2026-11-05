@@ -1,2 +1,6 @@
-rope.jpg
-think.jpg
+{
+  "photos": [
+    "rope.jpg",
+    "think.jpg"
+  ]
+}
