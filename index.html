@@ -160,6 +160,7 @@
   var DIR = "photography/";
   var EXT = /\.(jpe?g|png|webp|avif|gif)$/i;
   var ASP = [0.75, 1.33, 0.8, 1, 0.66, 1.5, 0.9, 1.2];
+  var KNOWN = ["rope.jpg", "think.jpg"]; /* always tried, even if the host hides the folder or the page is opened as a file */
   var BLANKS = 14; /* white placeholder cards shown until you add photos */
 
   function $(id) { return document.getElementById(id); }
@@ -182,8 +183,14 @@
     });
   }
   function fromJson() {
-    return fetch(DIR + "photos.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (a) {
-      if (!Array.isArray(a) || !a.length) throw 0; return a;
+    return fetch(DIR + "photos.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (t) {
+      t = t.replace(/^\uFEFF/, "");
+      var a;
+      try { a = JSON.parse(t); } catch (e) { a = t.split(/[\r\n,]+/); }   /* plain text list also works */
+      if (!Array.isArray(a)) a = (a && a.photos) || [];
+      a = a.map(function (x) { return typeof x === "string" ? x.trim().replace(/^["']|["']$/g, "") : x; })
+        .filter(function (x) { return typeof x === "string" ? EXT.test(x) : x && EXT.test(x.src || x.file || x.name || ""); });
+      if (!a.length) throw 0; return a;
     });
   }
   function probe() {
@@ -204,7 +211,21 @@
     })();
   }
   function discover() {
-    return fromListing().catch(function () { return fromJson(); }).catch(function () { return probe(); }).then(function (r) { return r || []; });
+    return fromListing().catch(function () { return fromJson(); }).catch(function () { return probe(); }).then(function (r) { return (r || []).concat(KNOWN); });
+  }
+
+  /* normalise, drop duplicates, keep only images that really load */
+  function load(list) {
+    var seen = {}, items = [];
+    list.map(norm).forEach(function (p) { var k = p.src.toLowerCase(); if (!seen[k]) { seen[k] = 1; items.push(p); } });
+    return Promise.all(items.map(function (p) {
+      return new Promise(function (res) {
+        var im = new Image(); im.alt = p.caption || ""; im.draggable = false; im.decoding = "async";
+        im.onload = function () { p.aspect = im.naturalWidth / im.naturalHeight; p.img = im; res(p); };
+        im.onerror = function () { res(null); };
+        im.src = p.src;
+      });
+    })).then(function (r) { return r.filter(Boolean); });
   }
 
   function captionOf(file) {
@@ -228,7 +249,7 @@
     if (!W || !H || !n) return;
     var m = Math.min(W, H), rnd = rng(7);
     var Rx = W * 0.38, Ry = H * 0.36, Rz = m * 0.42;
-    var scale = Math.max(0.55, Math.min(1.25, Math.sqrt(36 / n))) * (m < 600 ? 1.3 : 1);
+    var scale = Math.max(0.55, Math.min(2.2, Math.sqrt(36 / n))) * (m < 600 ? 1.3 : 1);
     stage.style.perspective = Math.max(1000, W) + "px";
     PHOTOS.forEach(function (p, i) {
       var a = p.aspect || ASP[i % ASP.length];
@@ -245,7 +266,7 @@
 
   function build(list) {
     var blank = !list.length;
-    PHOTOS = blank ? Array.apply(null, Array(BLANKS)).map(function () { return { blank: true, caption: "" }; }) : list.map(norm);
+    PHOTOS = blank ? Array.apply(null, Array(BLANKS)).map(function () { return { blank: true, caption: "" }; }) : list;
     n = PHOTOS.length;
     PHOTOS.forEach(function (p, i) {
       var b = document.createElement("button");
@@ -253,10 +274,7 @@
       if (p.blank) { b.tabIndex = -1; b.setAttribute("aria-hidden", "true"); b.appendChild(document.createElement("i")); }
       else {
         b.setAttribute("aria-label", p.caption || "photo " + (i + 1));
-        var im = new Image(); im.alt = p.caption || ""; im.draggable = false; im.decoding = "async";
-        im.onload = function () { p.aspect = im.naturalWidth / im.naturalHeight; schedule(); };
-        im.src = p.src;
-        b.appendChild(im);
+        b.appendChild(p.img);
       }
       world.appendChild(b); els.push(b);
     });
@@ -295,7 +313,7 @@
   })();
 
   /* start loading when the section is close to the screen, spin only while visible */
-  function start() { if (!started) { started = true; discover().then(build); } }
+  function start() { if (!started) { started = true; discover().then(load).then(build); } }
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (en) { inView = en[0].isIntersecting; if (inView) start(); }, { rootMargin: "300px" }).observe(stage);
   } else { inView = true; start(); }
