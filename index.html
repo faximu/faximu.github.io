@@ -182,14 +182,23 @@
       return out.sort(function (a, b) { return a.localeCompare(b, undefined, { numeric: true }); });
     });
   }
+  /* photos.json:  {"photos": ["rope.jpg", "think.jpg"]}  (also a plain array, or a sloppy list - all work) */
+  function parseList(t) {
+    t = t.replace(/^\uFEFF/, "");
+    var a;
+    try { a = JSON.parse(t); } catch (e) { a = null; }
+    if (a && !Array.isArray(a)) a = a.photos || a.images || a.files || [];
+    if (!a) {                                   /* not valid JSON: be forgiving */
+      var q = [], re = /["']([^"'\r\n]+?\.(?:jpe?g|png|webp|avif|gif))["']/gi, mm;
+      while ((mm = re.exec(t))) q.push(mm[1]);
+      a = q.length ? q : t.split(/[\r\n,]+/).map(function (l) { return l.replace(/^\s*\{?\s*"?photos"?\s*:\s*/i, "").replace(/[\[\]{}"']/g, "").trim(); });
+    }
+    return a.map(function (x) { return typeof x === "string" ? x.trim() : x; })
+      .filter(function (x) { return typeof x === "string" ? EXT.test(x) : x && EXT.test(x.src || x.file || x.name || ""); });
+  }
   function fromJson() {
     return fetch(DIR + "photos.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (t) {
-      t = t.replace(/^\uFEFF/, "");
-      var a;
-      try { a = JSON.parse(t); } catch (e) { a = t.split(/[\r\n,]+/); }   /* plain text list also works */
-      if (!Array.isArray(a)) a = (a && a.photos) || [];
-      a = a.map(function (x) { return typeof x === "string" ? x.trim().replace(/^["']|["']$/g, "") : x; })
-        .filter(function (x) { return typeof x === "string" ? EXT.test(x) : x && EXT.test(x.src || x.file || x.name || ""); });
+      var a = parseList(t);
       if (!a.length) throw 0; return a;
     });
   }
