@@ -55,6 +55,41 @@
   .lb-in figcaption:empty { display: none; }
   .lb-x { position: fixed; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); width: 44px; height: 44px; border-radius: 50%; border: 0; background: #d9d9d9; color: #111; font: bold 18px monospace; cursor: pointer; z-index: 101; }
   .lb-x:hover, .lb-x:focus-visible { background: #fff; outline: none; }
+
+  .snd { position: fixed; left: max(16px, env(safe-area-inset-left)); top: max(16px, env(safe-area-inset-top)); z-index: 90; display: flex; align-items: center; height: 56px; width: 56px; overflow: hidden; border-radius: 0; background: rgba(24,24,24,.82); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 2px 12px rgba(0,0,0,.5); transition: width .45s cubic-bezier(.22,1,.36,1), background .3s ease; will-change: width; }
+  .snd[hidden] { display: none; }
+  .snd:hover, .snd:focus-within, .snd.open { width: min(240px, calc(100vw - 32px)); background: rgba(18,18,18,.92); }
+  .snd-btn { flex: 0 0 56px; width: 56px; height: 56px; padding: 0; border: 0; background: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .snd-btn svg { width: 28px; height: 28px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .snd-btn:focus-visible { outline: 2px solid #fff; outline-offset: -4px; border-radius: 0; }
+  .snd-btn svg { transition: transform .25s ease; }
+  .snd-btn:active svg { transform: scale(.88); }
+  .snd-btn .i-off { display: none; }
+  .snd.muted .snd-btn .i-on { display: none; }
+  .snd.muted .snd-btn .i-off { display: block; }
+  .snd-vol { --v: 100%; flex: 1 1 auto; min-width: 0; height: 14px; margin: 0 20px 0 2px; padding: 0; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; opacity: 0; transform: translateX(-8px); transition: opacity .3s ease, transform .45s cubic-bezier(.22,1,.36,1); touch-action: none; }
+  .snd:hover .snd-vol, .snd:focus-within .snd-vol, .snd.open .snd-vol { opacity: 1; transform: none; transition-delay: .06s; }
+  .snd-vol::-webkit-slider-runnable-track { height: 14px; border-radius: 0; background: linear-gradient(to right, #fff var(--v), #8c8c8c var(--v)); }
+  .snd-vol::-moz-range-track { height: 14px; border-radius: 0; background: #8c8c8c; }
+  .snd-vol::-moz-range-progress { height: 14px; border-radius: 0; background: #fff; }
+  .snd-vol::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 0; height: 0; border: 0; }
+  .snd-vol::-moz-range-thumb { width: 0; height: 0; border: 0; background: transparent; }
+  .snd-vol:focus-visible { outline: none; }
+  .pop { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.7); opacity: 0; transition: opacity .35s ease; }
+  .pop[hidden] { display: none; }
+  .pop.on { opacity: 1; }
+  .pop-card { position: relative; width: min(360px, 100%); padding: 40px 28px 28px; border-radius: 0; background: #121212; color: #fff; font-family: monospace, sans-serif; text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,.6); transform: translateY(14px) scale(.96); opacity: 0; transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .35s ease; }
+  .pop.on .pop-card { transform: none; opacity: 1; }
+  .pop-card p { margin: 0 0 24px; font-size: 1.35rem; font-weight: bold; line-height: 1.3; }
+  .pop-row { display: flex; gap: 12px; }
+  .pop-btn { flex: 1 1 0; padding: 14px 10px; border: 1px solid #fff; border-radius: 0; background: transparent; color: #fff; font: bold 1rem monospace, sans-serif; cursor: pointer; transition: background .25s ease, color .25s ease, transform .2s ease; -webkit-tap-highlight-color: transparent; }
+  .pop-btn:hover, .pop-btn:focus-visible { background: #fff; color: #000; outline: none; }
+  .pop-btn:active { transform: scale(.96); }
+  .pop-yes { background: #fff; color: #000; }
+  .pop-yes:hover, .pop-yes:focus-visible { background: #d9d9d9; }
+  .pop-x { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 0; background: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .25s ease; }
+  .pop-x:hover, .pop-x:focus-visible { background: #2a2a2a; outline: none; }
+  .pop-x svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 </style>
 </head>
 <body>
@@ -137,6 +172,24 @@
 <section class="photos" id="photography" aria-label="photography">
   <div class="ph-stage" id="phStage"><div class="ph-world" id="phWorld"></div></div>
 </section>
+<audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+<div class="snd" id="snd" hidden>
+  <button class="snd-btn" id="sndBtn" type="button" aria-label="mute">
+    <svg class="i-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h3.2L11.5 5v14l-4.8-4.5H3.5z"/><path d="M15 9a4.2 4.2 0 0 1 0 6"/><path d="M17.8 6.5a8 8 0 0 1 0 11"/></svg>
+    <svg class="i-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h3.2L11.5 5v14l-4.8-4.5H3.5z"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg>
+  </button>
+  <input class="snd-vol" id="sndVol" type="range" min="0" max="100" step="1" value="100" aria-label="volume">
+</div>
+<div class="pop" id="pop" hidden role="dialog" aria-modal="true" aria-label="music">
+  <div class="pop-card">
+    <button class="pop-x" id="popX" type="button" aria-label="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+    <p>listen music?</p>
+    <div class="pop-row">
+      <button class="pop-btn pop-yes" id="popYes" type="button">yes :3</button>
+      <button class="pop-btn" id="popNo" type="button">no :c</button>
+    </div>
+  </div>
+</div>
 <div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="photo viewer">
   <button class="lb-x" id="lbClose" type="button" aria-label="close">✕</button>
   <figure class="lb-in"><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
@@ -358,6 +411,103 @@
     var dx = e.changedTouches[0].clientX - sx; sx = null;
     if (Math.abs(dx) > 60) show(cur + (dx < 0 ? 1 : -1));
   }, { passive: true });
+})();
+</script>
+<script>
+(function () {
+  var audio = document.getElementById("bgm"), box = document.getElementById("snd"),
+      btn = document.getElementById("sndBtn"), vol = document.getElementById("sndVol"),
+      pop = document.getElementById("pop"), yes = document.getElementById("popYes"),
+      no = document.getElementById("popNo"), cross = document.getElementById("popX");
+  var volume = 1, muted = false, started = false, missing = false, timer = null, popOpen = false;
+
+  try {
+    var v = parseFloat(localStorage.getItem("bgmVol2")), m = localStorage.getItem("bgmMuted2");
+    if (!isNaN(v)) volume = Math.min(1, Math.max(0, v));
+    muted = m === "1";
+  } catch (e) {}
+
+  function save() { try { localStorage.setItem("bgmVol2", volume); localStorage.setItem("bgmMuted2", muted ? "1" : "0"); } catch (e) {} }
+
+  function ui() {
+    var shown = muted ? 0 : volume;
+    audio.volume = volume; audio.muted = muted;
+    vol.value = Math.round(shown * 100);
+    vol.style.setProperty("--v", (shown * 100) + "%");
+    box.classList.toggle("muted", muted || volume === 0);
+    btn.setAttribute("aria-label", (muted || volume === 0) ? "unmute" : "mute");
+  }
+
+  function play() {
+    var p = audio.play();
+    if (p && p.then) p.then(function () { started = true; }).catch(function () {});
+  }
+
+  function wake() {
+    box.classList.add("open");
+    clearTimeout(timer);
+    timer = setTimeout(function () { box.classList.remove("open"); }, 2500);
+  }
+
+  function openPop() {
+    if (missing || popOpen) return;
+    popOpen = true;
+    pop.hidden = false;
+    requestAnimationFrame(function () { requestAnimationFrame(function () { pop.classList.add("on"); }); });
+    yes.focus();
+  }
+
+  function closePop() {
+    if (!popOpen) return;
+    popOpen = false;
+    pop.classList.remove("on");
+    setTimeout(function () { if (!popOpen) pop.hidden = true; }, 350);
+  }
+
+  yes.addEventListener("click", function () {
+    muted = false;
+    if (volume === 0) volume = 1;
+    ui(); save(); play(); closePop();
+  });
+  no.addEventListener("click", closePop);
+  cross.addEventListener("click", closePop);
+  pop.addEventListener("click", function (e) { if (e.target === pop) closePop(); });
+  addEventListener("keydown", function (e) { if (e.key === "Escape") closePop(); });
+
+  box.addEventListener("pointerdown", function (e) { if (e.pointerType !== "mouse") wake(); });
+
+  btn.addEventListener("click", function () {
+    if (!started) {
+      muted = false;
+      if (volume === 0) volume = 1;
+      ui(); save(); play();
+      return;
+    }
+    if (muted || volume === 0) {
+      muted = false;
+      if (volume === 0) volume = 1;
+    } else {
+      muted = true;
+    }
+    ui(); save();
+  });
+
+  vol.addEventListener("input", function () {
+    volume = vol.value / 100;
+    muted = volume === 0;
+    ui(); save(); wake();
+    if (!started && volume > 0) play();
+  });
+
+  audio.addEventListener("error", function () { missing = true; box.hidden = true; closePop(); });
+
+  ui();
+
+  setTimeout(function () {
+    if (missing) return;
+    box.hidden = false;
+    openPop();
+  }, 5000);
 })();
 </script>
 </body>
